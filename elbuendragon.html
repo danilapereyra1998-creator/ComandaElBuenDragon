@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAN JORGE MARKET</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background: #222; color: #fff; }
+  h1 { text-align: center; color: #ffff33; }
+  h2 { color: #ffff33; margin-top: 30px; }
+  .producto { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+  .producto-info { flex: 1; }
+  .botones { display: flex; gap: 5px; }
+  button { padding: 5px 10px; cursor: pointer; }
+  #pedido { border-top: 1px solid #ccc; margin-top: 20px; padding-top: 10px; }
+  input, select, textarea { padding: 5px; margin: 5px 0 15px 0; width: 100%; }
+  .comentarios-container { margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>SAN JORGE MARKET</h1>
+
+<label for="mozo">Nombre del mozo:</label>
+<input type="text" id="mozo" placeholder="Ingrese su nombre">
+
+<label for="comprador">Nombre del comprador:</label>
+<input type="text" id="comprador" placeholder="Ingrese nombre del comprador">
+
+<label>Menú Sin TACC:</label>
+<select id="sinTACC">
+  <option value="No">No</option>
+  <option value="Si">Si</option>
+</select>
+
+<p>Alias: <strong>SANJORGEMARKET.MP</strong></p>
+
+<div id="menu"></div>
+
+<div class="transferencia-container">
+  <label>¿Abona en transferencia?</label>
+  <select id="transferencia">
+    <option value="No">No</option>
+    <option value="Si">Si</option>
+  </select>
+</div>
+
+<div id="pedido">
+  <h2>Pedido:</h2>
+  <ul id="listaPedido"></ul>
+  <h3>Total: $<span id="total">0</span></h3>
+  <button id="btnEnviar">Enviar Pedido</button>
+  <button id="btnReiniciar">Reiniciar Pedido</button>
+</div>
+
+<script>
+const productos = [
+  {categoria:"Comida", nombre:"Pernil x3", precio:6000, texto:"Salsa > Criolla y/o Mostaza y miel. Aderezos > Mayonesa, Kétchup, Mostaza."},
+  {categoria:"Comida", nombre:"Choripán", precio:5000, texto:"Salsa > Chimichurri. Aderezos > Mayonesa, Kétchup, Mostaza."},
+  {categoria:"Comida", nombre:"Hamburguesa", precio:5000, texto:"Salsa > Cheddar. Aderezos > Mayonesa, Kétchup, Mostaza."},
+  {categoria:"Comida", nombre:"Hamburguesa Vegana", precio:5000, texto:"Salsa > Cheddar. Aderezos > Mayonesa, Kétchup, Mostaza."},
+  {categoria:"Comida", nombre:"Pancho", precio:2000, texto:"Salsa > Cheddar y/o Chimichurri. Aderezos > Mayonesa, Kétchup, Mostaza."},
+  {categoria:"Comida", nombre:"Empanada x3", precio:3000},
+  {categoria:"Comida", nombre:"Ensalada", precio:3500},
+  {categoria:"Bebida", nombre:"Coca Cola 2.25 L", precio:5000},
+  {categoria:"Bebida", nombre:"Coca Cola 2L", precio:5000},
+  {categoria:"Bebida", nombre:"Sprite 2L", precio:5000},
+  {categoria:"Bebida", nombre:"Sprite Zero 2L", precio:5000},
+  {categoria:"Bebida", nombre:"Fanta 2L", precio:5000},
+  {categoria:"Bebida", nombre:"Agua Naranja 1.5L", precio:2500},
+  {categoria:"Bebida", nombre:"Agua Manzana 1.5L", precio:2500},
+  {categoria:"Bebida", nombre:"Agua", precio:2000},
+  {categoria:"Cafetería", nombre:"Café", precio:1000},
+  {categoria:"Cafetería", nombre:"Torta", precio:1500},
+  {categoria:"Cafetería", nombre:"Café + Torta", precio:2000}
+];
+
+let cantidades = Array(productos.length).fill(0);
+const menuDiv = document.getElementById('menu');
+const listaPedido = document.getElementById('listaPedido');
+const totalSpan = document.getElementById('total');
+
+const entryIDs = { 
+  mozo: "entry.991921184",
+  comprador: "entry.1349190121",
+  sinTACC: "entry.827262629",
+  pedido: "entry.1163299138",
+  comentarios: "entry.1304800763",
+  transferencia: "entry.1636813999",
+  total: "entry.1909467265"
+};
+
+function actualizarPedido(){
+  listaPedido.innerHTML = '';
+  let total = 0;
+  productos.forEach((p,index)=>{
+    if(cantidades[index]>0){
+      let li = document.createElement('li');
+      li.textContent = `${cantidades[index]} x ${p.nombre}${p.texto ? " ("+p.texto+")" : ""} - $${p.precio*cantidades[index]}`;
+      listaPedido.appendChild(li);
+      total += p.precio*cantidades[index];
+    }
+  });
+  totalSpan.textContent = total;
+  return total>0;
+}
+
+function crearMenu(){
+  const categorias = [...new Set(productos.map(p=>p.categoria))];
+  categorias.forEach(categoria=>{
+    const h2=document.createElement('h2');
+    h2.textContent=categoria;
+    menuDiv.appendChild(h2);
+    productos.forEach((p,index)=>{
+      if(p.categoria===categoria){
+        const div=document.createElement('div');
+        div.className='producto';
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'producto-info';
+        infoDiv.textContent = `${p.nombre} - $${p.precio}`;
+        if(p.texto) {
+          const small=document.createElement('small');
+          small.textContent=p.texto;
+          small.style.display="block";
+          small.style.fontSize="0.9em";
+          small.style.color="#ccc";
+          infoDiv.appendChild(small);
+        }
+
+        div.appendChild(infoDiv);
+
+        if(p.categoria!=="Cafetería"){
+          const botonesDiv=document.createElement('div');
+          botonesDiv.className='botones';
+
+          const btnMenos=document.createElement('button');
+          btnMenos.textContent='-';
+          btnMenos.addEventListener('click',()=>{modificarCantidad(index,-1)});
+          const cantidadSpan=document.createElement('span');
+          cantidadSpan.id=`cant${index}`;
+          cantidadSpan.textContent='0';
+          const btnMas=document.createElement('button');
+          btnMas.textContent='+';
+          btnMas.addEventListener('click',()=>{modificarCantidad(index,1)});
+
+          botonesDiv.appendChild(cantidadSpan);
+          botonesDiv.appendChild(btnMenos);
+          botonesDiv.appendChild(btnMas);
+
+          div.appendChild(botonesDiv);
+        }
+
+        menuDiv.appendChild(div);
+
+        // Comentarios justo debajo de Ensalada
+        if(p.nombre === "Ensalada"){
+          const comentariosDiv=document.createElement('div');
+          comentariosDiv.className='comentarios-container';
+          const label=document.createElement('label');
+          label.setAttribute('for','comentarios');
+          label.textContent='Comentarios / Aderezos extra:';
+          const textarea=document.createElement('textarea');
+          textarea.id='comentarios';
+          textarea.placeholder='Escriba aquí sus aderezos o comentarios...';
+          textarea.rows=3;
+          comentariosDiv.appendChild(label);
+          comentariosDiv.appendChild(textarea);
+          menuDiv.appendChild(comentariosDiv);
+        }
+      }
+    });
+  });
+}
+
+function modificarCantidad(index,delta){
+  cantidades[index]+=delta;
+  if(cantidades[index]<0) cantidades[index]=0;
+  document.getElementById(`cant${index}`).textContent=cantidades[index];
+  actualizarPedido();
+}
+
+function reiniciarPedido(){
+  cantidades.fill(0);
+  productos.forEach((_,i)=>document.getElementById(`cant${i}`).textContent='0');
+  listaPedido.innerHTML='';
+  totalSpan.textContent='0';
+  const comentariosEl = document.getElementById('comentarios');
+  if(comentariosEl) comentariosEl.value='';
+}
+
+function enviarPedido(){
+  const mozo=document.getElementById('mozo').value;
+  const comprador=document.getElementById('comprador').value;
+  const sinTACC=document.getElementById('sinTACC').value;
+  const transferencia=document.getElementById('transferencia').value;
+  const comentarios=document.getElementById('comentarios') ? document.getElementById('comentarios').value : '';
+
+  if(!mozo || !comprador){alert("Ingrese nombre del mozo y del comprador"); return;}
+  if(!actualizarPedido()){alert("No hay productos seleccionados"); return;}
+
+  let resumen = productos.map((p,i)=>{
+    if(cantidades[i]>0){
+      return `${cantidades[i]} x ${p.nombre}${p.texto ? " ("+p.texto+")" : ""}`;
+    } else return '';
+  }).filter(x=>x).join(", ");
+
+  const total=cantidades.reduce((acc,p,i)=>acc+p*productos[i].precio,0);
+
+  const formData=new FormData();
+  formData.append(entryIDs.mozo, mozo);
+  formData.append(entryIDs.comprador, comprador);
+  formData.append(entryIDs.sinTACC, sinTACC);
+  formData.append(entryIDs.pedido,resumen);
+  formData.append(entryIDs.comentarios, comentarios);
+  formData.append(entryIDs.transferencia, transferencia);
+  formData.append(entryIDs.total,total);
+
+  fetch("https://docs.google.com/forms/d/e/1FAIpQLSeQEXXcF2YXVj7WivyK8tOxrtL4SoO81DgrlbK_Py8HyyXKEw/formResponse",{
+    method:"POST",
+    body:formData,
+    mode:"no-cors"
+  }).then(()=>alert("Pedido enviado correctamente"))
+    .catch(()=>alert("Error al enviar el pedido"));
+
+  reiniciarPedido();
+}
+
+document.getElementById('btnReiniciar').addEventListener('click', reiniciarPedido);
+document.getElementById('btnEnviar').addEventListener('click', enviarPedido);
+
+crearMenu();
+</script>
+</body>
+</html>
